@@ -1,0 +1,69 @@
+# docker-compose.yml   (place in any folder you like)
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    volumes:
+      - ./volumes/ollama:/root/.ollama
+    ports:
+      - "11434:11434"
+    networks: [ai-net]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  comfyui:
+    image: comfyui-local:latest
+    container_name: comfyui
+    restart: unless-stopped
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ./volumes/comfyui-models:/app/models
+      # - ./volumes/comfyuiW-models:/workspace/ComfyUI/models
+      # - ./volumes/comfyuiW-output:/workspace/ComfyUI/output
+    ports:
+      - "8188:8188"
+    networks: [ai-net]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  open-webui:
+    image: backplane/open-webui:0.6.34
+    # image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    restart: unless-stopped
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - ENABLE_IMAGE_GENERATION=True
+      - IMAGE_GENERATION_ENGINE=comfyui
+      - IMAGE_SIZE="512x512"
+      - IMAGE_STEPS=50
+      - COMFYUI_BASE_URL=http://comfyui:8188
+    volumes:
+      - ./volumes/open-webui:/app/backend/data
+    ports:
+      - "3000:8080"
+    networks: [ai-net]
+    depends_on: [ollama, comfyui]
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+networks:
+  ai-net:
+    driver: bridge
