@@ -1,4 +1,6 @@
 #! /bin/sh
+mkdir -p volumes
+mkdir -p volumes/{comfyui-models/checkpoints,ollama,open-webui}
 
 docker compose up -d
 
